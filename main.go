@@ -192,22 +192,23 @@ func parseReportConfig(s string) reportConfig {
 }
 
 type retryConfig struct {
-	Command     string
-	Args        []string
-	Backoff     time.Duration
-	Condition   string
-	Fibonacci   bool
-	FixedDelay  interval
-	HoldStderr  bool
-	HoldStdout  bool
-	MaxAttempts int
-	RandomDelay interval
-	RandomSeed  uint64
-	ReplayStdin bool
-	Report      reportConfig
-	Reset       time.Duration
-	Timeout     time.Duration
-	Verbose     int
+	Command       string
+	Args          []string
+	Backoff       time.Duration
+	Condition     string
+	ConstantDelay time.Duration
+	Fibonacci     bool
+	HoldStderr    bool
+	HoldStdout    bool
+	MaxAttempts   int
+	MaxDelay      time.Duration
+	RandomDelay   interval
+	RandomSeed    uint64
+	ReplayStdin   bool
+	Report        reportConfig
+	Reset         time.Duration
+	Timeout       time.Duration
+	Verbose       int
 }
 
 type recurStats struct {
@@ -340,15 +341,15 @@ func delayBeforeAttempt(attemptNum int, config retryConfig, rng *rand.Rand) time
 		return 0
 	}
 
-	currFixed := config.FixedDelay.Start.Seconds()
+	currFixed := config.ConstantDelay.Seconds()
 	currFixed += math.Pow(config.Backoff.Seconds(), float64(attemptNum-1))
 
 	if config.Fibonacci {
 		currFixed += fib(attemptNum - 1)
 	}
 
-	if currFixed > config.FixedDelay.End.Seconds() {
-		currFixed = config.FixedDelay.End.Seconds()
+	if currFixed > config.MaxDelay.Seconds() {
+		currFixed = config.MaxDelay.Seconds()
 	}
 
 	currRandom := config.RandomDelay.Start.Seconds() +
@@ -594,22 +595,23 @@ Options:
 
 func parseArgs() retryConfig {
 	config := retryConfig{
-		Args:        []string{},
-		Backoff:     backoffDefault,
-		Command:     "",
-		Condition:   conditionDefault,
-		Fibonacci:   false,
-		FixedDelay:  interval{Start: delayDefault, End: maxDelayDefault},
-		HoldStderr:  false,
-		HoldStdout:  false,
-		MaxAttempts: maxAttemptsDefault,
-		RandomDelay: interval{Start: 0, End: 0},
-		RandomSeed:  randomSeedDefault,
-		ReplayStdin: false,
-		Reset:       resetDefault,
-		Timeout:     timeoutDefault,
-		Verbose:     0,
-		Report:      reportConfig{Format: reportFormatNone, Path: ""},
+		Args:          []string{},
+		Backoff:       backoffDefault,
+		Command:       "",
+		Condition:     conditionDefault,
+		ConstantDelay: delayDefault,
+		Fibonacci:     false,
+		HoldStderr:    false,
+		HoldStdout:    false,
+		MaxAttempts:   maxAttemptsDefault,
+		MaxDelay:      maxDelayDefault,
+		RandomDelay:   interval{Start: 0, End: 0},
+		RandomSeed:    randomSeedDefault,
+		ReplayStdin:   false,
+		Reset:         resetDefault,
+		Timeout:       timeoutDefault,
+		Verbose:       0,
+		Report:        reportConfig{Format: reportFormatNone, Path: ""},
 	}
 
 	usageError := func(message string, badValue any) {
@@ -680,9 +682,9 @@ func parseArgs() retryConfig {
 				usageError("invalid delay: %v", value)
 			}
 
-			config.FixedDelay.Start = delay
-			if config.FixedDelay.End < config.FixedDelay.Start {
-				config.FixedDelay.End = config.FixedDelay.Start
+			config.ConstantDelay = delay
+			if config.MaxDelay < config.ConstantDelay {
+				config.MaxDelay = config.ConstantDelay
 			}
 
 		case "-F", "--fib":
@@ -710,7 +712,7 @@ func parseArgs() retryConfig {
 				usageError("invalid maximum delay: %v", value)
 			}
 
-			config.FixedDelay.End = maxDelay
+			config.MaxDelay = maxDelay
 
 		case "-O", "--hold-stdout":
 			config.HoldStdout = true
