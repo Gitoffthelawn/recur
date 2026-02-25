@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2025 D. Bohdan
+// Copyright (c) 2023-2026 D. Bohdan
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -239,11 +239,21 @@ func TestConditionFalsy(t *testing.T) {
 }
 
 func TestConditionAttemptForever(t *testing.T) {
-	stdout, _, _ := runCommand("--condition", "attempt == 5", "--forever", commandHello)
+	t.Run("--forever", func(t *testing.T) {
+		stdout, _, _ := runCommand("--condition", "attempt == 5", "--forever", commandHello)
 
-	if count := len(regexp.MustCompile("hello").FindAllString(stdout, -1)); count != 5 {
-		t.Errorf("Expected 5 instances of 'hello', got %d", count)
-	}
+		if count := len(regexp.MustCompile("hello").FindAllString(stdout, -1)); count != 5 {
+			t.Errorf("Expected 5 instances of 'hello', got %d", count)
+		}
+	})
+
+	t.Run("--unlimited", func(t *testing.T) {
+		stdout, _, _ := runCommand("--condition", "attempt == 5", "--unlimited", commandHello)
+
+		if count := len(regexp.MustCompile("hello").FindAllString(stdout, -1)); count != 5 {
+			t.Errorf("Expected 5 instances of 'hello', got %d", count)
+		}
+	})
 }
 
 func TestConditionAttemptNegative(t *testing.T) {

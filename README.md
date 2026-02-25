@@ -45,8 +45,8 @@ go install dbohdan.com/recur/v3@latest
 <!-- BEGIN USAGE -->
 ```none
 Usage: recur [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d
-<delay>] [-E] [-F] [-f] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r
-<reset-time>] [-s <seed>] [-t <timeout>] [-v] [--] <command> [<arg> ...]
+<delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r
+<reset-time>] [-s <seed>] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]
 
 Retry a command with exponential backoff and jitter.
 
@@ -65,7 +65,7 @@ Options:
           Print version number and exit
 
   -a, --attempts 10
-          Maximum number of attempts (negative for infinite)
+          Maximum number of attempts (negative for unlimited)
 
   -b, --backoff 0
           Base for exponential backoff (duration)
@@ -81,9 +81,6 @@ Options:
 
   -F, --fib
           Add Fibonacci backoff
-
-  -f, --forever
-          Infinite attempts
 
   -I, --replay-stdin
           Read standard input until EOF at the start and replay it on each
@@ -113,6 +110,9 @@ Fibonacci backoff (duration)
   -t, --timeout -1s
           Timeout for each attempt (duration; negative for no timeout)
 
+  -u, --unlimited, -f, --forever
+          Unlimited attempts
+
   -v, --verbose
           Increase verbosity (up to 3 times)
 ```
@@ -136,6 +136,12 @@ recur --backoff 2s --condition False --forever --max-delay 1m --reset 5m foo --c
 recur exits with the last command's exit code unless the user overrides this in the condition.
 When the command is not found during the last attempt, recur exits with code 127.
 recur exits with code 124 on timeout and 255 on internal error.
+
+> [!NOTE]
+> The option `-f`/`--forever` is deprecated because of the ambiguity of "forever".
+> (`recur --forever` still tries until success unless you change the success condition.)
+> `-f`/`--forever` will remain available but is not recommended for new usage.
+> Use `-u`/`--unlimited` instead.
 
 ### Standard input
 
@@ -253,7 +259,7 @@ Matching against standard error with `stderr.search` works similarly.
 ### Environment variables
 
 recur sets the environment variable `RECUR_ATTEMPT` to the current attempt number so the command can access it.
-recur also sets `RECUR_MAX_ATTEMPTS` to the value of `-a`/`--attempts`
+recur also sets `RECUR_MAX_ATTEMPTS` to the value of the `-a`/`--attempts` option
 and `RECUR_ATTEMPT_SINCE_RESET` to the attempt number since exponential and Fibonacci backoff were reset.
 
 The following command succeeds on the last attempt:

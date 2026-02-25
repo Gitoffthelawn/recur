@@ -6,7 +6,7 @@ complete -c recur -s c -l condition -d "Success condition" -a "'code == 0' 'code
 complete -c recur -s d -l delay -d "Constant delay" -a "1s 5s 30s 1m 5m" -x
 complete -c recur -s E -l hold-stderr -d "Buffer standard error for each attempt and only print it on success"
 complete -c recur -s F -l fib -d "Add Fibonacci backoff"
-complete -c recur -s f -l forever -d "Infinite attempts"
+complete -c recur -s f -l forever -d "Unlimited attempts (deprecated; use -u/--unlimited)"
 complete -c recur -s I -l replay-stdin -d "Replay standard input on each attempt"
 complete -c recur -s j -l jitter -d "Additional random delay" -a "1s 1s,5s 1m" -x
 complete -c recur -s m -l max-delay -d "Maximum allowed delay" -a "1s 5s 30s 1m 5m" -x
@@ -15,6 +15,7 @@ complete -c recur -s R -l report -d "Report output" -a "- report.json report.txt
 complete -c recur -s r -l reset -d "Minimum attempt time that resets exponential and Fibonacci backoff" -a "5s 1m 5m 30m 1h" -x
 complete -c recur -s s -l seed -d "Random seed for jitter" -a "0 123" -x
 complete -c recur -s t -l timeout -d "Timeout for each attempt" -a "1s 5s 30s 1m 5m" -x
+complete -c recur -s u -l unlimited -d "Unlimited attempts"
 complete -c recur -s v -l verbose -d "Increase verbosity"
 
 # Complete with available commands.

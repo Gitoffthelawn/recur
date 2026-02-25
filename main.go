@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2025 D. Bohdan
+// Copyright (c) 2023-2026 D. Bohdan
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +53,7 @@ const (
 	exitCodeCommandNotFound = 127
 	exitCodeError           = 255
 	exitCodeTimeout         = 124
-	version                 = "3.1.0"
+	version                 = "3.2.0"
 
 	invSqrt5 = 0.4472135954999579
 
@@ -499,7 +499,7 @@ func wrapForTerm(s string) string {
 
 func usage(w io.Writer) {
 	s := fmt.Sprintf(
-		`Usage: %s [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d <delay>] [-E] [-F] [-f] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r <reset-time>] [-s <seed>] [-t <timeout>] [-v] [--] <command> [<arg> ...]`,
+		`Usage: %s [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r <reset-time>] [-s <seed>] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]`,
 		filepath.Base(os.Args[0]),
 	)
 
@@ -528,7 +528,7 @@ Options:
           Print version number and exit
 
   -a, --attempts %v
-          Maximum number of attempts (negative for infinite)
+          Maximum number of attempts (negative for unlimited)
 
   -b, --backoff %v
           Base for exponential backoff (duration)
@@ -544,9 +544,6 @@ Options:
 
   -F, --fib
           Add Fibonacci backoff
-
-  -f, --forever
-          Infinite attempts
 
   -I, --replay-stdin
           Read standard input until EOF at the start and replay it on each attempt
@@ -571,6 +568,9 @@ Options:
 
   -t, --timeout %v
           Timeout for each attempt (duration; negative for no timeout)
+
+  -u, --unlimited, -f, --forever
+          Unlimited attempts
 
   -v, --verbose
           Increase verbosity (up to %v times)
@@ -687,9 +687,6 @@ func parseArgs() retryConfig {
 		case "-F", "--fib":
 			config.Fibonacci = true
 
-		case "-f", "--forever":
-			config.MaxAttempts = -1
-
 		case "-h", "--help":
 			printHelp = true
 
@@ -755,6 +752,9 @@ func parseArgs() retryConfig {
 			report := parseReportConfig(reportStr)
 
 			config.Report = report
+
+		case "-u", "--unlimited", "-f", "--forever":
+			config.MaxAttempts = -1
 
 		// "-v" is handled in the default case.
 		case "--verbose":
