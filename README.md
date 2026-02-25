@@ -97,8 +97,8 @@ Fibonacci backoff (duration)
           Buffer standard output for each attempt and only print it on success
 
   -R, --report ''
-          Report output (file path or '-' for stderr; prefix with 'json:' or
-'text:' to override the format; empty to disable)
+          Report output (file path, '-' for stderr, or '' to disable; prefix
+with 'json:' or 'text:' to override the format)
 
   -r, --reset -1s
           Minimum attempt time that resets exponential and Fibonacci backoff
