@@ -62,8 +62,9 @@ const (
 
 	verboseLevelAttemptResults   = 1
 	verboseLevelConditionDetails = 2
-	verboseLevelConfigDebug      = 3
-	verboseLevelMax              = 3
+	verboseLevelConfig           = 3
+	verboseLevelConfigWithZeros  = 4
+	verboseLevelMax              = 4
 )
 
 type attempt struct {
@@ -944,8 +945,17 @@ func main() {
 		}
 	}
 
-	if config.Verbose >= verboseLevelConfigDebug {
-		log.Printf("configuration:\n%s\n", repr.String(config, repr.Indent("\t"), repr.OmitEmpty(false)))
+	if config.Verbose >= verboseLevelConfig {
+		opts := []repr.Option{
+			repr.Indent("\t"),
+			repr.OmitEmpty(false),
+		}
+
+		if config.Verbose >= verboseLevelConfigWithZeros {
+			opts = append(opts, repr.OmitZero(false))
+		}
+
+		log.Printf("configuration:\n%s\n", repr.String(config, opts...))
 	}
 
 	//nolint:gosec

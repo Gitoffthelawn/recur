@@ -202,6 +202,14 @@ func TestVerboseConfig(t *testing.T) {
 	}
 }
 
+func TestVerboseConfigWithZeros(t *testing.T) {
+	_, stderr, _ := runCommand("-vv", "-vv", commandHello)
+
+	if matched, _ := regexp.MatchString(`RandomSeed: 0`, stderr); !matched {
+		t.Error(`Expected 'RandomSeed: 0' in stderr`)
+	}
+}
+
 func TestVerboseTooMany(t *testing.T) {
 	_, stderr, _ := runCommand("-vvvvvv", "")
 

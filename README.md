@@ -114,7 +114,7 @@ Fibonacci backoff (duration)
           Unlimited attempts
 
   -v, --verbose
-          Increase verbosity (up to 3 times)
+          Increase verbosity (up to 4 times)
 ```
 <!-- END USAGE -->
 
@@ -140,8 +140,8 @@ recur exits with code 124 on timeout and 255 on internal error.
 > [!NOTE]
 > The option `-f`/`--forever` is deprecated because of the ambiguity of "forever".
 > (`recur --forever` still tries until success unless you change the success condition.)
-> `-f`/`--forever` will remain available but is not recommended for new usage.
-> Use `-u`/`--unlimited` instead.
+> `-f`/`--forever` will remain available.
+> It is not recommended for new usage: use `-u`/`--unlimited` instead.
 
 ### Standard input
 
