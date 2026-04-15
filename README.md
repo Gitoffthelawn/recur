@@ -130,7 +130,7 @@ Every time `foo` exits, there is a delay that grows exponentially from two secon
 The delay resets back to two seconds if the command runs for at least five minutes.
 
 ```shell
-recur --backoff 2s --condition False --forever --max-delay 1m --reset 5m foo --config bar.cfg
+recur --backoff 2s --condition False --max-delay 1m --unlimited --reset 5m foo --config bar.cfg
 ```
 
 recur exits with the last command's exit code unless the user overrides this in the condition.
@@ -300,13 +300,13 @@ The most significant differences between Starlark and Python for this purpose ar
 You can use the following variables in the condition expression:
 
 - `attempt`: `int` — the number of the current attempt, starting at one.
-  Combine with `--forever` to use the condition instead of the built-in attempt counter.
+  Combine with `--unlimited` to use the condition instead of the built-in attempt counter.
 - `attempt_since_reset`: `int` — the attempt number since exponential and Fibonacci backoff were reset, starting at one.
 - `code`: `int | None` — the exit code of the last command.
   `code` is `None` when the command was not found and 124 when a timeout occurred.
 - `command_found`: `bool` — whether the last command was found.
 - `max_attempts`: `int` — the value of the `--attempts` option.
-  `--forever` sets it to -1.
+  `--unlimited` sets it to -1.
 - `stderr`: `io_buffer | None` — an object representing standard error.
   `None` without `-E`/`--hold-stderr`.
 - `stdin`: `io_buffer | None` — an object representing standard input.
