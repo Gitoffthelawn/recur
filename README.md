@@ -122,8 +122,11 @@ Duration arguments take [Go duration strings](https://pkg.go.dev/time#ParseDurat
 for example, `0`, `100ms`, `2.5s`, `0.5m`, or `1h`.
 The value of `-j`/`--jitter` must be either a single duration or two durations joined with a comma, like `1s,2s` or `500ms, 0.5m`.
 
-If the maximum delay (`-m`/`--max-delay`) is shorter than the constant delay (`-d`/`--delay`), the constant delay will automatically increase the maximum delay to match it.
-Use `-m`/`--max-delay` after `-d`/`--delay` if you want a shorter maximum delay.
+If the maximum allowed delay (`-m`/`--max-delay`) is shorter than the constant delay (`-d`/`--delay`), recur will automatically increase the maximum delay to match the constant delay.
+Use the option `-m`/`--max-delay` after `-d`/`--delay` if you want a shorter maximum delay.
+
+The additional random delay (`-j`/`--jitter`) and the maximum allowed delay do not interact.
+Jitter is not capped by the maximum delay and does not count towards it.
 
 The following recur options run the command `foo --config bar.cfg` indefinitely.
 Every time `foo` exits, there is a delay that grows exponentially from two seconds to a minute.
@@ -202,7 +205,7 @@ You can match regular expressions against recur's input and the command's output
 
 These methods use [Go regular expressions](https://pkg.go.dev/regexp) with the [RE2 syntax](https://github.com/google/re2/wiki/Syntax).
 
-The `stdin`, `stdout`, and `stderr` objects are `None` without their respective command-line option (`-I`/`--replay-stdin`, `-O`/`--hold-stdout`, or `-E`/`--hold-stderr`).
+The `stdin`, `stdout`, and `stderr` objects are `None` without their respective command-line options (`-I`/`--replay-stdin`, `-O`/`--hold-stdout`, or `-E`/`--hold-stderr`).
 Calling methods on `None` will result in an error.
 
 Standard input, standard output, and standard error are not available directly as Starlark strings to reduce memory usage.
