@@ -704,6 +704,9 @@ func parseArgs() retryConfig {
 				config.MaxDelay = config.ConstantDelay
 			}
 
+		case "-E", "--hold-stderr":
+			config.HoldStderr = true
+
 		case "-F", "--fib":
 			config.Fibonacci = true
 
@@ -734,8 +737,11 @@ func parseArgs() retryConfig {
 		case "-O", "--hold-stdout":
 			config.HoldStdout = true
 
-		case "-E", "--hold-stderr":
-			config.HoldStderr = true
+		case "-R", "--report":
+			reportStr := nextArg(arg)
+			report := parseReportConfig(reportStr)
+
+			config.Report = report
 
 		case "-r", "--reset":
 			value := nextArg(arg)
@@ -757,6 +763,9 @@ func parseArgs() retryConfig {
 
 			config.RandomSeed = seed
 
+		case "-T", "--date-time":
+			config.DateTime = true
+
 		case "-t", "--timeout":
 			value := nextArg(arg)
 
@@ -767,24 +776,15 @@ func parseArgs() retryConfig {
 
 			config.Timeout = timeout
 
-		case "-T", "--date-time":
-			config.DateTime = true
-
-		case "-R", "--report":
-			reportStr := nextArg(arg)
-			report := parseReportConfig(reportStr)
-
-			config.Report = report
-
 		case "-u", "--unlimited", "-f", "--forever":
 			config.MaxAttempts = -1
+
+		case "-V", "--version":
+			printVersion = true
 
 		// "-v" is handled in the default case.
 		case "--verbose":
 			config.Verbose++
-
-		case "-V", "--version":
-			printVersion = true
 
 		default:
 			if vShortFlags.MatchString(arg) {
