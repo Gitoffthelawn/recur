@@ -186,6 +186,18 @@ func TestVerbose(t *testing.T) {
 	}
 }
 
+func TestVerboseDateTime(t *testing.T) {
+	_, stderr, _ := runCommand("-T", "-v", "-a", "2", commandExit99)
+
+	if matched, _ := regexp.MatchString(`recur \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[+Z]`, stderr); !matched {
+		t.Error("Expected RFC 3339 date-time format in stderr")
+	}
+
+	if matched, _ := regexp.MatchString(`recur \[\d{2}:\d{2}:\d{2}\.\d\]: `, stderr); matched {
+		t.Error("Did not expect elapsed time format in stderr")
+	}
+}
+
 func TestVerboseCommandNotFound(t *testing.T) {
 	_, stderr, _ := runCommand("-v", "-a", "3", noSuchCommand)
 

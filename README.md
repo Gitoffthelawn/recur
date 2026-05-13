@@ -46,7 +46,8 @@ go install dbohdan.com/recur/v3@latest
 ```none
 Usage: recur [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d
 <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r
-<reset-time>] [-s <seed>] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]
+<reset-time>] [-s <seed>] [-T] [-t <timeout>] [-u] [-v] [--] <command> [<arg>
+...]
 
 Retry a command with exponential backoff and jitter.
 
@@ -106,6 +107,9 @@ with 'json:' or 'text:' to override the format)
 
   -s, --seed 0
           Random seed for jitter (0 for automatic)
+
+  -T, --date-time
+          Print date-time per RFC 3339 instead of elapsed time in verbose mode
 
   -t, --timeout -1s
           Timeout for each attempt (duration; negative for no timeout)

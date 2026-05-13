@@ -197,6 +197,7 @@ type retryConfig struct {
 	Backoff       time.Duration
 	Condition     string
 	ConstantDelay time.Duration
+	DateTime      bool
 	Fibonacci     bool
 	HoldStderr    bool
 	HoldStdout    bool
@@ -235,12 +236,25 @@ const (
 	timeoutDefault     = -time.Second
 )
 
-type elapsedTimeWriter struct {
+type logWriter struct {
+	dateTime  bool
 	startTime time.Time
 }
 
 //nolint:mnd
-func (w *elapsedTimeWriter) Write(bytes []byte) (int, error) {
+func (w *logWriter) Write(bytes []byte) (int, error) {
+	if w.dateTime {
+		now := time.Now()
+
+		//nolint:wrapcheck
+		return fmt.Fprintf(
+			os.Stderr,
+			"recur [%s]: %s",
+			strings.Replace(now.Format(time.RFC3339), "T", " ", 1),
+			string(bytes),
+		)
+	}
+
 	elapsed := time.Since(w.startTime)
 
 	hours := int(elapsed.Hours())
@@ -495,13 +509,12 @@ func wrapForTerm(s string) string {
 		return s
 	}
 
-	//nolint:gosec
 	return wordwrap.WrapString(s, uint(width))
 }
 
 func usage(w io.Writer) {
 	s := fmt.Sprintf(
-		`Usage: %s [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r <reset-time>] [-s <seed>] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]`,
+		`Usage: %s [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r <reset-time>] [-s <seed>] [-T] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]`,
 		filepath.Base(os.Args[0]),
 	)
 
@@ -568,6 +581,9 @@ Options:
   -s, --seed %v
           Random seed for jitter (0 for automatic)
 
+  -T, --date-time
+          Print date-time per RFC 3339 instead of elapsed time in verbose mode
+
   -t, --timeout %v
           Timeout for each attempt (duration; negative for no timeout)
 
@@ -600,6 +616,7 @@ func parseArgs() retryConfig {
 		Command:       "",
 		Condition:     conditionDefault,
 		ConstantDelay: delayDefault,
+		DateTime:      false,
 		Fibonacci:     false,
 		HoldStderr:    false,
 		HoldStdout:    false,
@@ -749,6 +766,9 @@ func parseArgs() retryConfig {
 			}
 
 			config.Timeout = timeout
+
+		case "-T", "--date-time":
+			config.DateTime = true
 
 		case "-R", "--report":
 			reportStr := nextArg(arg)
@@ -914,15 +934,16 @@ func main() {
 
 	// Initialize the random number generator for jitter.
 	var pcg *rand.PCG
-	//nolint:gosec
 	if config.RandomSeed == randomSeedDefault {
+		//nolint:gosec
 		pcg = rand.NewPCG(rand.Uint64(), rand.Uint64())
 	} else {
 		pcg = rand.NewPCG(config.RandomSeed, 0)
 	}
 
 	// Configure logging.
-	customWriter := &elapsedTimeWriter{
+	customWriter := &logWriter{
+		dateTime:  config.DateTime,
 		startTime: time.Now(),
 	}
 	log.SetOutput(customWriter)
