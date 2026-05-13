@@ -15,6 +15,11 @@ const (
 	projectName      = "recur"
 	distDir          = "dist"
 	sshKey           = ".ssh/git"
+
+	archAMD64 = "amd64"
+	archARM64 = "arm64"
+	osLinux   = "linux"
+	osWindows = "windows"
 )
 
 type BuildTarget struct {
@@ -36,18 +41,18 @@ func main() {
 	}
 
 	targets := []BuildTarget{
-		{"android", "arm64"},
-		{"darwin", "amd64"},
-		{"darwin", "arm64"},
-		{"freebsd", "amd64"},
-		{"linux", "amd64"},
-		{"linux", "arm64"},
-		{"linux", "riscv64"},
-		{"netbsd", "amd64"},
-		{"openbsd", "amd64"},
-		{"windows", "386"},
-		{"windows", "amd64"},
-		{"windows", "arm64"},
+		{"android", archARM64},
+		{"darwin", archAMD64},
+		{"darwin", archARM64},
+		{"freebsd", archAMD64},
+		{osLinux, archAMD64},
+		{osLinux, archARM64},
+		{osLinux, "riscv64"},
+		{"netbsd", archAMD64},
+		{"openbsd", archAMD64},
+		{osWindows, "386"},
+		{osWindows, archAMD64},
+		{osWindows, archARM64},
 	}
 
 	for _, target := range targets {
@@ -67,7 +72,7 @@ func build(dir string, target BuildTarget, version string) error {
 	fmt.Printf("Building for %s/%s\n", target.os, target.arch)
 
 	ext := ""
-	if target.os == "windows" {
+	if target.os == osWindows {
 		ext = ".exe"
 	}
 

@@ -34,6 +34,7 @@ import (
 const (
 	starlarkVarFlushStderr = "_flush_stderr"
 	starlarkVarFlushStdout = "_flush_stdout"
+	methodNameSearch       = "search"
 )
 
 type conditionEvalResult struct {
@@ -151,7 +152,7 @@ func makeFlushMethod(varName string) *starlark.Builtin {
 }
 
 func makeSearchMethod(content []byte) *starlark.Builtin {
-	return starlark.NewBuiltin("search", func(_ *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	return starlark.NewBuiltin(methodNameSearch, func(_ *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		var pattern starlark.String
 		var group starlark.Value = starlark.None
 		var defaultValue starlark.Value = starlark.None
@@ -228,7 +229,7 @@ func evaluateCondition(attemptInfo attempt, expr string, stdinContent []byte, st
 	if replayStdin {
 		stdin = &starlarkIOBuffer{
 			methods: starlark.StringDict{
-				"search": makeSearchMethod(stdinContent),
+				methodNameSearch: makeSearchMethod(stdinContent),
 			},
 		}
 	} else {
@@ -239,8 +240,8 @@ func evaluateCondition(attemptInfo attempt, expr string, stdinContent []byte, st
 	if holdStdout {
 		stdout = &starlarkIOBuffer{
 			methods: starlark.StringDict{
-				"flush":  makeFlushMethod(starlarkVarFlushStdout),
-				"search": makeSearchMethod(stdoutContent),
+				"flush":          makeFlushMethod(starlarkVarFlushStdout),
+				methodNameSearch: makeSearchMethod(stdoutContent),
 			},
 		}
 	} else {
@@ -251,8 +252,8 @@ func evaluateCondition(attemptInfo attempt, expr string, stdinContent []byte, st
 	if holdStderr {
 		stderr = &starlarkIOBuffer{
 			methods: starlark.StringDict{
-				"flush":  makeFlushMethod(starlarkVarFlushStderr),
-				"search": makeSearchMethod(stderrContent),
+				"flush":          makeFlushMethod(starlarkVarFlushStderr),
+				methodNameSearch: makeSearchMethod(stderrContent),
 			},
 		}
 	} else {
