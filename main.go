@@ -565,7 +565,7 @@ Options:
           Base for exponential backoff (duration)
 
   -C, --condition-file %v
-          Success condition Starlark source file (file path or '' to disable; will call %v)
+          Success condition Starlark source file (file path or '' to disable)
 
   -c, --condition %v
           Success condition (Starlark expression)
@@ -615,7 +615,6 @@ Options:
 		maxAttemptsDefault,
 		formatDuration(backoffDefault),
 		singleQuote(conditionFileDefault),
-		singleQuote(conditionFnName+"()"),
 		singleQuote(conditionDefault),
 		formatDuration(delayDefault),
 		singleQuote(jitterDefault),

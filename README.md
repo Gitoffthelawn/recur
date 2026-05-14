@@ -72,8 +72,7 @@ Options:
           Base for exponential backoff (duration)
 
   -C, --condition-file ''
-          Success condition Starlark source file (file path or '' to disable;
-will call 'main()')
+          Success condition Starlark source file (file path or '' to disable)
 
   -c, --condition 'code == 0'
           Success condition (Starlark expression)
@@ -393,6 +392,8 @@ You can define helper functions and module-level variables in the file.
 Here is a translation of `--condition 'code == 0 or (code in (1, 2, 3, 4) and exit(code))'` above:
 
 ```python
+# curl.star
+
 EARLY_EXIT = (1, 2, 3, 4)
 
 
