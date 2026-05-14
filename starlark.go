@@ -32,6 +32,7 @@ import (
 )
 
 const (
+	conditionFnName        = "main"
 	starlarkVarFlushStderr = "_flush_stderr"
 	starlarkVarFlushStdout = "_flush_stdout"
 	methodNameSearch       = "search"
@@ -214,7 +215,25 @@ func makeSearchMethod(content []byte) *starlark.Builtin {
 	})
 }
 
-func evaluateCondition(attemptInfo attempt, expr string, stdinContent []byte, stdoutContent []byte, stderrContent []byte, replayStdin bool, holdStdout bool, holdStderr bool) (conditionEvalResult, error) {
+func makeIOBuffer(content []byte, flushVarName string, enable bool) starlark.Value {
+	if !enable {
+		return starlark.None
+	}
+
+	methods := starlark.StringDict{
+		methodNameSearch: makeSearchMethod(content),
+	}
+
+	if flushVarName != "" {
+		methods["flush"] = makeFlushMethod(flushVarName)
+	}
+
+	return &starlarkIOBuffer{
+		methods: methods,
+	}
+}
+
+func evaluateCondition(attemptInfo attempt, expr string, conditionFile string, stdinContent []byte, stdoutContent []byte, stderrContent []byte, replayStdin bool, holdStdout bool, holdStderr bool) (conditionEvalResult, error) {
 	//nolint:exhaustruct
 	thread := &starlark.Thread{Name: "condition"}
 
@@ -225,40 +244,9 @@ func evaluateCondition(attemptInfo attempt, expr string, stdinContent []byte, st
 		code = starlark.None
 	}
 
-	var stdin starlark.Value
-	if replayStdin {
-		stdin = &starlarkIOBuffer{
-			methods: starlark.StringDict{
-				methodNameSearch: makeSearchMethod(stdinContent),
-			},
-		}
-	} else {
-		stdin = starlark.None
-	}
-
-	var stdout starlark.Value
-	if holdStdout {
-		stdout = &starlarkIOBuffer{
-			methods: starlark.StringDict{
-				"flush":          makeFlushMethod(starlarkVarFlushStdout),
-				methodNameSearch: makeSearchMethod(stdoutContent),
-			},
-		}
-	} else {
-		stdout = starlark.None
-	}
-
-	var stderr starlark.Value
-	if holdStderr {
-		stderr = &starlarkIOBuffer{
-			methods: starlark.StringDict{
-				"flush":          makeFlushMethod(starlarkVarFlushStderr),
-				methodNameSearch: makeSearchMethod(stderrContent),
-			},
-		}
-	} else {
-		stderr = starlark.None
-	}
+	stdin := makeIOBuffer(stdinContent, "", replayStdin)
+	stdout := makeIOBuffer(stdoutContent, starlarkVarFlushStdout, holdStdout)
+	stderr := makeIOBuffer(stderrContent, starlarkVarFlushStderr, holdStderr)
 
 	env := starlark.StringDict{
 		"exit":    starlark.NewBuiltin("exit", StarlarkExit),
@@ -276,20 +264,57 @@ func evaluateCondition(attemptInfo attempt, expr string, stdinContent []byte, st
 		"total_time":          starlark.Float(float64(attemptInfo.TotalTime) / float64(time.Second)),
 	}
 
-	val, err := starlark.EvalOptions(syntax.LegacyFileOptions(), thread, "", expr, env)
+	var val starlark.Value
+	var err error
+
+	if conditionFile == "" {
+		val, err = starlark.EvalOptions(syntax.LegacyFileOptions(), thread, "", expr, env)
+	} else {
+		var globals starlark.StringDict
+
+		globals, err = starlark.ExecFileOptions(syntax.LegacyFileOptions(), thread, conditionFile, nil, env)
+		if err != nil {
+			// The condition file may change between attempts (if the user edits or replaces it).
+			// A failure to load or parse it is thereforce non-fatal.
+			// We log the error and treat this attempt as a failure instead of terminating the retry loop.
+			log.Printf("condition file error: %v", err)
+
+			return conditionEvalResult{
+				Success:     false,
+				FlushStdout: false,
+				FlushStderr: false,
+			}, nil
+		}
+
+		conditionFn, ok := globals[conditionFnName]
+		if !ok {
+			// Missing the required function is treated as a non-fatal error because the user can edit the file.
+			log.Printf("condition file error: must define a '%v' function", conditionFnName)
+
+			return conditionEvalResult{
+				Success:     false,
+				FlushStdout: false,
+				FlushStderr: false,
+			}, nil
+		}
+
+		val, err = starlark.Call(thread, conditionFn, nil, nil)
+	}
+
 	flushStdout := flushLocal(thread, starlarkVarFlushStdout)
 	flushStderr := flushLocal(thread, starlarkVarFlushStderr)
 
-	if err != nil {
-		var exitErr *exitRequestError
-		if errors.As(err, &exitErr) {
-			return conditionEvalResult{
-				Success:     false,
-				FlushStdout: flushStdout,
-				FlushStderr: flushStderr,
-			}, exitErr
-		}
+	var exitErr *exitRequestError
 
+	if errors.As(err, &exitErr) {
+		return conditionEvalResult{
+			Success:     false,
+			FlushStdout: flushStdout,
+			FlushStderr: flushStderr,
+		}, exitErr
+	}
+
+	if err != nil {
 		return conditionEvalResult{
 			Success:     false,
 			FlushStdout: false,

@@ -44,10 +44,10 @@ go install dbohdan.com/recur/v3@latest
 
 <!-- BEGIN USAGE -->
 ```none
-Usage: recur [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d
-<delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r
-<reset-time>] [-s <seed>] [-T] [-t <timeout>] [-u] [-v] [--] <command> [<arg>
-...]
+Usage: recur [-h] [-V] [-a <attempts>] [-b <backoff>] [-C <path>] [-c
+<condition>] [-d <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R
+<path>] [-r <reset-time>] [-s <seed>] [-T] [-t <timeout>] [-u] [-v] [--]
+<command> [<arg> ...]
 
 Retry a command with exponential backoff and jitter.
 
@@ -70,6 +70,10 @@ Options:
 
   -b, --backoff 0
           Base for exponential backoff (duration)
+
+  -C, --condition-file ''
+          Success condition Starlark source file (file path or '' to disable;
+will call 'main()')
 
   -c, --condition 'code == 0'
           Success condition (Starlark expression)
@@ -293,16 +297,16 @@ The default condition is `code == 0`.
 This means recur stops retrying when the command exits with code zero.
 
 The condition expression can evaluate to any value.
-`False`, `None`, numeric zero (`0`, `0.0`), and empty collections (`""`, `()`, `[]`, `{}`) are considered false.
-All other values are considered true.
+`False`, `None`, numeric zero (`0`, `0.0`), and empty collections (`""`, `()`, `[]`, `{}`) are considered false ("falsey values").
+All other values are considered true ("truthy values").
 
 If you know Python, you can quickly start writing recur conditions in Starlark.
 The most significant differences between Starlark and Python for this purpose are:
 
 - Starlark has no `is`.
   You must write `code == None`, not `code is None`.
-- Starlark has no sets.
-  Write `code in (1, 2, 3)` or `code in [1, 2, 3]` instead of `code in {1, 2, 3}`.
+- Starlark has no set literals.
+  Write `code in (1, 2, 3)`, `code in [1, 2, 3]`, or `code in set([1, 2, 3])` instead of `code in {1, 2, 3}`.
 
 You can use the following variables in the condition expression:
 
@@ -355,6 +359,58 @@ In the following example, recur stops early and does not retry when the command'
 
 ```shell
 recur --condition 'code == 0 or (code in (1, 2, 3, 4) and exit(code))' curl "$url"
+```
+
+### Condition files
+
+The `-C`/`--condition-file` option lets you load more complex success conditions from a Starlark source file.
+The file is treated as a full Starlark program, not just an expression.
+The file must define a function named `main()` that returns a truthy value on success and a falsy value on failure.
+The same variables and built-in functions are available in condition files as in condition expressions.
+
+The `-C`/`--condition-file` and `-c`/`--condition` options are mutually exclusive.
+
+Unlike an invalid condition expression, an invalid condition file is not a fatal error.
+The condition file is loaded after every attempt and can change (for example, if you edit it).
+Therefore, when a condition file is invalid, recur logs the error and treats the attempt as a failure instead of terminating.
+
+The following example shows a simple condition file equivalent to the default condition expression:
+
+```python
+# cond.star
+
+def main():
+    return code == 0
+```
+
+Use it with:
+
+```shell
+recur --condition-file cond.star my-command
+```
+
+You can define helper functions and module-level variables in the file.
+Here is a translation of `--condition 'code == 0 or (code in (1, 2, 3, 4) and exit(code))'` above:
+
+```python
+EARLY_EXIT = (1, 2, 3, 4)
+
+
+def check_early_exit(status):
+    if status in EARLY_EXIT:
+        exit(status)
+
+
+def main():
+    check_early_exit(code)
+
+    return code == 0
+```
+
+To use it:
+
+```shell
+recur --condition-file curl.star curl "$url"
 ```
 
 ## Reports

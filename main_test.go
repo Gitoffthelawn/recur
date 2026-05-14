@@ -838,3 +838,92 @@ func TestReportFormatOverride(t *testing.T) {
 		}
 	})
 }
+
+func TestConditionFile(t *testing.T) {
+	t.Run("succeed on code 0", func(t *testing.T) {
+		tempDir := t.TempDir()
+		condFile := filepath.Join(tempDir, "cond.star")
+		os.WriteFile(condFile, []byte(`
+def main():
+    code_le_zero = code <= 0
+    code_ge_zero = code >= 0
+
+    return code_le_zero and code_ge_zero
+`), 0644)
+
+		_, _, err := runCommand("-C", condFile, commandHello)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+	})
+
+	t.Run("fail on code 99", func(t *testing.T) {
+		tempDir := t.TempDir()
+		condFile := filepath.Join(tempDir, "cond.star")
+		os.WriteFile(condFile, []byte(`
+def main():
+    return code != 99
+`), 0644)
+
+		_, stderr, err := runCommand("-a", "2", "-C", condFile, commandExit99)
+		if err == nil {
+			t.Error("Expected an error, got nil")
+		}
+		if matched, _ := regexp.MatchString("maximum 2 attempts reached", stderr); !matched {
+			t.Error("Expected 'maximum 2 attempts reached' in stderr")
+		}
+	})
+
+	t.Run("main returns False", func(t *testing.T) {
+		tempDir := t.TempDir()
+		condFile := filepath.Join(tempDir, "cond.star")
+		os.WriteFile(condFile, []byte(`
+RANGE = range(10)
+
+def main():
+    return bool([i for i in RANGE if False])
+`), 0644)
+
+		_, stderr, err := runCommand("-a", "2", "-C", condFile, commandExit99)
+		if err == nil {
+			t.Error("Expected an error, got nil")
+		}
+		if matched, _ := regexp.MatchString("maximum 2 attempts reached", stderr); !matched {
+			t.Error("Expected 'maximum 2 attempts reached' in stderr")
+		}
+	})
+
+	t.Run("missing condition function", func(t *testing.T) {
+		tempDir := t.TempDir()
+		condFile := filepath.Join(tempDir, "cond.star")
+		os.WriteFile(condFile, []byte("x = 1\n"), 0644)
+
+		_, stderr, err := runCommand("-a", "2", "-C", condFile, commandExit99)
+		if err == nil {
+			t.Error("Expected an error, got nil")
+		}
+		if matched, _ := regexp.MatchString("must define", stderr); !matched {
+			t.Error("Expected 'must define' in stderr")
+		}
+	})
+
+	t.Run("mutually exclusive with -c", func(t *testing.T) {
+		tempDir := t.TempDir()
+		condFile := filepath.Join(tempDir, "cond.star")
+		os.WriteFile(condFile, []byte(`
+def main():
+    return True
+`), 0644)
+
+		_, stderr, err := runCommand("-c", "True", "-C", condFile, commandHello)
+		if err == nil {
+			t.Error("Expected an error, got nil")
+		}
+		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
+			t.Errorf("Expected exit status 2, got %v", err)
+		}
+		if matched, _ := regexp.MatchString("mutually exclusive", stderr); !matched {
+			t.Error("Expected 'mutually exclusive' in stderr")
+		}
+	})
+}

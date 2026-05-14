@@ -196,6 +196,7 @@ type retryConfig struct {
 	Args          []string
 	Backoff       time.Duration
 	Condition     string
+	ConditionFile string
 	ConstantDelay time.Duration
 	DateTime      bool
 	Fibonacci     bool
@@ -224,16 +225,17 @@ type recurStats struct {
 }
 
 const (
-	backoffDefault     = time.Duration(0)
-	conditionDefault   = "code == 0"
-	delayDefault       = time.Duration(0)
-	jitterDefault      = "0,0"
-	maxDelayDefault    = time.Hour
-	maxAttemptsDefault = 10
-	randomSeedDefault  = uint64(0)
-	reportDefault      = ""
-	resetDefault       = -time.Second
-	timeoutDefault     = -time.Second
+	backoffDefault       = time.Duration(0)
+	conditionDefault     = "code == 0"
+	conditionFileDefault = ""
+	delayDefault         = time.Duration(0)
+	jitterDefault        = "0,0"
+	maxDelayDefault      = time.Hour
+	maxAttemptsDefault   = 10
+	randomSeedDefault    = uint64(0)
+	reportDefault        = ""
+	resetDefault         = -time.Second
+	timeoutDefault       = -time.Second
 )
 
 type logWriter struct {
@@ -462,7 +464,7 @@ func retry(config retryConfig, stdinContent []byte, rng *rand.Rand) (int, recurS
 			TotalTime:        totalTime,
 		}
 
-		evalResult, err := evaluateCondition(attemptInfo, config.Condition, stdinContent, stdoutContent, stderrContent, config.ReplayStdin, config.HoldStdout, config.HoldStderr)
+		evalResult, err := evaluateCondition(attemptInfo, config.Condition, config.ConditionFile, stdinContent, stdoutContent, stderrContent, config.ReplayStdin, config.HoldStdout, config.HoldStderr)
 
 		if evalResult.FlushStdout {
 			os.Stdout.Write(stdoutContent)
@@ -514,7 +516,7 @@ func wrapForTerm(s string) string {
 
 func usage(w io.Writer) {
 	s := fmt.Sprintf(
-		`Usage: %s [-h] [-V] [-a <attempts>] [-b <backoff>] [-c <condition>] [-d <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r <reset-time>] [-s <seed>] [-T] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]`,
+		`Usage: %s [-h] [-V] [-a <attempts>] [-b <backoff>] [-C <path>] [-c <condition>] [-d <delay>] [-E] [-F] [-I] [-j <jitter>] [-m <max-delay>] [-O] [-R <path>] [-r <reset-time>] [-s <seed>] [-T] [-t <timeout>] [-u] [-v] [--] <command> [<arg> ...]`,
 		filepath.Base(os.Args[0]),
 	)
 
@@ -547,6 +549,9 @@ Options:
 
   -b, --backoff %v
           Base for exponential backoff (duration)
+
+  -C, --condition-file '%v'
+          Success condition Starlark source file (file path or '' to disable; will call '%v()')
 
   -c, --condition '%v'
           Success condition (Starlark expression)
@@ -595,6 +600,8 @@ Options:
 `,
 		maxAttemptsDefault,
 		formatDuration(backoffDefault),
+		conditionFileDefault,
+		conditionFnName,
 		conditionDefault,
 		formatDuration(delayDefault),
 		jitterDefault,
@@ -615,6 +622,7 @@ func parseArgs() retryConfig {
 		Backoff:       backoffDefault,
 		Command:       "",
 		Condition:     conditionDefault,
+		ConditionFile: "",
 		ConstantDelay: delayDefault,
 		DateTime:      false,
 		Fibonacci:     false,
@@ -643,6 +651,8 @@ func parseArgs() retryConfig {
 	var i int
 	printHelp := false
 	printVersion := false
+	conditionSet := false
+	conditionFileSet := false
 
 	nextArg := func(flag string) string {
 		i++
@@ -690,6 +700,13 @@ func parseArgs() retryConfig {
 
 		case "-c", "--condition":
 			config.Condition = nextArg(arg)
+			config.ConditionFile = ""
+			conditionSet = true
+
+		case "-C", "--condition-file":
+			config.Condition = ""
+			config.ConditionFile = nextArg(arg)
+			conditionFileSet = true
 
 		case "-d", "--delay":
 			value := nextArg(arg)
@@ -805,6 +822,10 @@ func parseArgs() retryConfig {
 	if printVersion {
 		fmt.Printf("%s\n", version)
 		os.Exit(0)
+	}
+
+	if conditionSet && conditionFileSet {
+		usageError("-C/--condition-file and -c/--condition are mutually exclusive%v", "")
 	}
 
 	if config.Verbose > verboseLevelMax {
