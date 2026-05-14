@@ -523,6 +523,20 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, wrapForTerm(s))
 }
 
+func singleQuote(s string) string {
+	if s == "" {
+		return "''"
+	}
+
+	valid := regexp.MustCompile("^[A-Za-z0-9_-]+$")
+
+	if valid.MatchString(s) {
+		return s
+	}
+
+	return "'" + s + "'"
+}
+
 func help() {
 	usage(os.Stdout)
 
@@ -550,10 +564,10 @@ Options:
   -b, --backoff %v
           Base for exponential backoff (duration)
 
-  -C, --condition-file '%v'
-          Success condition Starlark source file (file path or '' to disable; will call '%v()')
+  -C, --condition-file %v
+          Success condition Starlark source file (file path or '' to disable; will call %v)
 
-  -c, --condition '%v'
+  -c, --condition %v
           Success condition (Starlark expression)
 
   -d, --delay %v
@@ -568,7 +582,7 @@ Options:
   -I, --replay-stdin
           Read standard input until EOF at the start and replay it on each attempt
 
-  -j, --jitter '%v'
+  -j, --jitter %v
           Additional random delay (maximum duration or 'min,max' duration)
 
   -m, --max-delay %v
@@ -577,7 +591,7 @@ Options:
   -O, --hold-stdout
           Buffer standard output for each attempt and only print it on success
 
-  -R, --report '%v'
+  -R, --report %v
           Report output (file path, '-' for stderr, or '' to disable; prefix with 'json:' or 'text:' to override the format)
 
   -r, --reset %v
@@ -600,13 +614,13 @@ Options:
 `,
 		maxAttemptsDefault,
 		formatDuration(backoffDefault),
-		conditionFileDefault,
-		conditionFnName,
-		conditionDefault,
+		singleQuote(conditionFileDefault),
+		singleQuote(conditionFnName+"()"),
+		singleQuote(conditionDefault),
 		formatDuration(delayDefault),
-		jitterDefault,
+		singleQuote(jitterDefault),
 		formatDuration(maxDelayDefault),
-		reportDefault,
+		singleQuote(reportDefault),
 		formatDuration(resetDefault),
 		randomSeedDefault,
 		formatDuration(timeoutDefault),
